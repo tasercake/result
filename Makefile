@@ -16,5 +16,5 @@ test: phony
 docs: phony
 	uv run --python 3.10 lazydocs \
 		--overview-file README.md \
-		--src-base-url https://github.com/rustedpy/result/blob/main/ \
+		--src-base-url https://github.com/montasaurus/result/blob/main/ \
 		./src/result
