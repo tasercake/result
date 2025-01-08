@@ -1,17 +1,21 @@
 # Changelog
 
-This project follows semantic versioning.
-
-Possible log types:
-
-- `[added]` for new features.
-- `[changed]` for changes in existing functionality.
-- `[deprecated]` for once-stable features removed in upcoming releases.
-- `[removed]` for deprecated features removed in this release.
-- `[fixed]` for any bug fixes.
-- `[security]` to invite users to upgrade in case of vulnerabilities.
-
 ## [Unreleased]
+
+### Breaking
+- Dropped Python 3.8 & 3.9 to simplify maintenance
+
+### Features
+- Added Python 3.13
+- Added support for `@as_generator_result` and `@as_async_generator_result`, which function like `@as_result` but wrap the yield values of a generator
+- Allow bubbling up unwrapping of nested `Result` inside the `@as_*` decorated classes. If you unwrap an `Err` of an exception type that you handle in the generator, it will return that `Err(Exception)`from the decorated function as if you had thrown the Exception directly.
+
+### Fixes
+- Switch to a uv build system with hatch
+- Switched linter to Ruff
+- Updated the links to point to forked repo
+
+## [0.18.0.dev0] - Unreleased, Forked from Upstream
 
 - `[changed]` Improve type narrowing for `is_ok` and `is_err` type guards by
   replacing `typing.TypeGuard` with `typing.TypeIs` (#193)
