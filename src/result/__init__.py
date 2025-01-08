@@ -29,4 +29,4 @@ __all__ = [
     "do",
     "do_async",
 ]
-__version__ = "0.18.0.dev0"
+__version__ = "0.19.0"
