@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import sys
 from typing import (
     Any,
     AsyncGenerator,
@@ -14,19 +13,15 @@ from typing import (
     Iterator,
     Literal,
     NoReturn,
+    ParamSpec,
     Type,
+    TypeAlias,
     TypeVar,
     Union,
 )
 from warnings import warn
 
 from typing_extensions import TypeIs
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec, TypeAlias
-else:
-    from typing_extensions import ParamSpec, TypeAlias
-
 
 T = TypeVar("T", covariant=True)  # Success type
 E = TypeVar("E", covariant=True)  # Error type
@@ -35,6 +30,9 @@ F = TypeVar("F")
 P = ParamSpec("P")
 R = TypeVar("R")
 TBE = TypeVar("TBE", bound=BaseException)
+TY = TypeVar("TY", covariant=True)  # Generator Yield type
+TS = TypeVar("TS")  # Generator Send type
+TR = TypeVar("TR", covariant=True)  # Generator Return type
 
 
 class Ok(Generic[T]):
@@ -521,6 +519,100 @@ def as_async_result(
                 return Ok(await f(*args, **kwargs))
             except exceptions as exc:
                 return Err(exc)
+
+        return async_wrapper
+
+    return decorator
+
+
+def as_generator_result(
+    *exceptions: Type[TBE],
+) -> Callable[
+    [Callable[P, Generator[TY, TS, TR]]],
+    Callable[P, Generator[Result[TY, TBE], TS, TR | None]],
+]:
+    if not exceptions or not all(
+        inspect.isclass(exception) and issubclass(exception, BaseException)
+        for exception in exceptions
+    ):
+        raise TypeError("as_result() requires one or more exception types")
+
+    def decorator(
+        f: Callable[P, Generator[TY, TS, TR]],
+    ) -> Callable[P, Generator[Result[TY, TBE], TS, TR | None]]:
+        @functools.wraps(f)
+        def wrapper(
+            *args: P.args, **kwargs: P.kwargs
+        ) -> Generator[Result[TY, TBE], TS, TR | None]:
+            gen = f(*args, **kwargs)
+
+            try:
+                first_bit = next(gen)
+            except StopIteration as e:
+                return e.value
+            except exceptions as exc:
+                yield Err(exc)
+                return None
+
+            send_value = yield Ok(first_bit)
+
+            while True:
+                try:
+                    yield_value = gen.send(send_value)
+                except StopIteration as e:
+                    return e.value
+                except exceptions as exc:
+                    send_value = yield Err(exc)
+                    return None
+
+                send_value = yield Ok(yield_value)
+
+        return wrapper
+
+    return decorator
+
+
+def as_async_generator_result(
+    *exceptions: Type[TBE],
+) -> Callable[
+    [Callable[P, AsyncGenerator[TY, TS]]],
+    Callable[P, AsyncGenerator[Result[TY, TBE], TS]],
+]:
+    if not exceptions or not all(
+        inspect.isclass(exception) and issubclass(exception, BaseException)
+        for exception in exceptions
+    ):
+        raise TypeError("as_result() requires one or more exception types")
+
+    def decorator(
+        f: Callable[P, AsyncGenerator[TY, TS]],
+    ) -> Callable[P, AsyncGenerator[Result[TY, TBE], TS]]:
+        @functools.wraps(f)
+        async def async_wrapper(
+            *args: P.args, **kwargs: P.kwargs
+        ) -> AsyncGenerator[Result[TY, TBE], TS]:
+            gen = f(*args, **kwargs)
+
+            try:
+                first_bit = await anext(gen)
+            except StopAsyncIteration:
+                return
+            except exceptions as exc:
+                yield Err(exc)
+                return
+
+            send_value = yield Ok(first_bit)
+
+            while True:
+                try:
+                    yield_value = await gen.asend(send_value)
+                except StopAsyncIteration:
+                    return
+                except exceptions as exc:
+                    send_value = yield Err(exc)
+                    return
+
+                send_value = yield Ok(yield_value)
 
         return async_wrapper
 

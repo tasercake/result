@@ -4,12 +4,14 @@ from .result import (
     OkErr,
     Result,
     UnwrapError,
+    as_async_generator_result,
     as_async_result,
+    as_generator_result,
     as_result,
-    is_ok,
-    is_err,
     do,
     do_async,
+    is_err,
+    is_ok,
 )
 
 __all__ = [
@@ -20,6 +22,8 @@ __all__ = [
     "UnwrapError",
     "as_async_result",
     "as_result",
+    "as_async_generator_result",
+    "as_generator_result",
     "is_ok",
     "is_err",
     "do",

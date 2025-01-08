@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+from typing import AsyncGenerator, Generator
 
 import pytest
 
-from result import Err, Ok, OkErr, Result, UnwrapError, as_async_result, as_result
+from result import (
+    Err,
+    Ok,
+    OkErr,
+    Result,
+    UnwrapError,
+    as_async_generator_result,
+    as_async_result,
+    as_generator_result,
+    as_result,
+)
 
 
 def test_ok_factories() -> None:
@@ -435,3 +446,150 @@ def sq_lambda(i: int) -> Result[int, int]:
 
 def to_err_lambda(i: int) -> Result[int, int]:
     return Err(i)
+
+
+def test_as_generator_result_ok() -> None:
+    @as_generator_result(ValueError)
+    def my_generator(val: int) -> Generator[int, None, None]:
+        yield val
+        yield val + 1
+        yield val + 2
+
+    result = my_generator(1)
+    assert next(result) == Ok(1)
+    assert next(result) == Ok(2)
+    assert next(result) == Ok(3)
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+def test_as_generator_result_err() -> None:
+    @as_generator_result(ValueError)
+    def my_generator(val: int) -> Generator[int, None, None]:
+        yield val
+        raise ValueError("Test Error")
+
+    result = my_generator(1)
+    assert next(result) == Ok(1)
+    error_result = next(result)
+    assert isinstance(error_result, Err)
+    assert error_result.err_value.args[0] == "Test Error"
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+def test_as_generator_result_with_send() -> None:
+    @as_generator_result(ValueError)
+    def my_generator() -> Generator[int, int, None]:
+        val = yield 1
+        val = yield val if val is not None else 0
+        val = yield val + 2 if val is not None else 0
+
+    result = my_generator()
+    assert next(result) == Ok(1)
+    assert result.send(10) == Ok(10)
+    assert result.send(20) == Ok(22)
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+def test_as_generator_result_with_send_and_exception() -> None:
+    @as_generator_result(ValueError)
+    def my_generator() -> Generator[Result[int, ValueError], int, None]:
+        val: int | None = yield Ok(1)
+        try:
+            if val is not None:
+                raise ValueError("Send Value Error")
+        except ValueError as e:
+            val = yield Err(e)
+
+        val = yield Ok(val) if val is not None else Ok(0)
+        val = yield Ok(val + 2) if val is not None else Ok(0)
+
+    result = my_generator()
+    assert next(result) == Ok(Ok(1))
+
+    error_result = result.send(10)
+    assert error_result.unwrap().unwrap_err().args[0] == "Send Value Error"
+
+    assert result.send(20) == Ok(Ok(20))
+    assert result.send(30) == Ok(Ok(32))
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_ok() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator(val: int) -> AsyncGenerator[int, None]:
+        yield val
+        yield val + 1
+        yield val + 2
+
+    result = my_generator(1)
+    assert await anext(result) == Ok(1)
+    assert await anext(result) == Ok(2)
+    assert await anext(result) == Ok(3)
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_err() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator(val: int) -> AsyncGenerator[int, None]:
+        yield val
+        raise ValueError("Test Error")
+
+    result = my_generator(1)
+    assert await anext(result) == Ok(1)
+    error_result = await anext(result)
+    assert isinstance(error_result, Err)
+    assert error_result.err_value.args[0] == "Test Error"
+
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_with_send() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator() -> AsyncGenerator[int, int]:
+        val = yield 1
+        val = yield val if val is not None else 0
+        val = yield val + 2 if val is not None else 0
+
+    result = my_generator()
+    assert await anext(result) == Ok(1)
+    assert await result.asend(10) == Ok(10)
+    assert await result.asend(20) == Ok(22)
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_with_send_and_exception() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator() -> AsyncGenerator[Result[int, ValueError], int]:
+        val: int | None = yield Ok(1)
+        try:
+            if val is not None:
+                raise ValueError("Async Send Value Error")
+        except ValueError as e:
+            val = yield Err(e)
+
+        val = yield Ok(val) if val is not None else Ok(0)
+        val = yield Ok(val + 2) if val is not None else Ok(0)
+
+    result = my_generator()
+    assert await anext(result) == Ok(Ok(1))
+
+    # This now correctly gets the Err directly
+    error_result = await result.asend(10)
+    assert error_result.unwrap().unwrap_err().args[0] == "Async Send Value Error"
+
+    # Correctly resumes with the sent value after the exception
+    assert await result.asend(20) == Ok(Ok(20))
+    assert await result.asend(30) == Ok(Ok(32))
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)

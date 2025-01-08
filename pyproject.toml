@@ -51,6 +51,9 @@ warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
+[tool.ruff]
+target-version = "py310"
+
 [tool.pytest.ini_options]
 addopts = ["--tb=short"]
 testpaths = ["tests"]
