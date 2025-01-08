@@ -486,6 +486,11 @@ def as_result(
                 return Ok(f(*args, **kwargs))
             except exceptions as exc:
                 return Err(exc)
+            except UnwrapError as ue:
+                if ue.__cause__ is not None and isinstance(ue.__cause__, exceptions):
+                    return Err(ue.__cause__)
+
+                raise
 
         return wrapper
 
@@ -519,6 +524,11 @@ def as_async_result(
                 return Ok(await f(*args, **kwargs))
             except exceptions as exc:
                 return Err(exc)
+            except UnwrapError as ue:
+                if ue.__cause__ is not None and isinstance(ue.__cause__, exceptions):
+                    return Err(ue.__cause__)
+
+                raise
 
         return async_wrapper
 
@@ -553,6 +563,12 @@ def as_generator_result(
             except exceptions as exc:
                 yield Err(exc)
                 return None
+            except UnwrapError as ue:
+                if ue.__cause__ is not None and isinstance(ue.__cause__, exceptions):
+                    yield Err(ue.__cause__)
+                    return None
+
+                raise
 
             send_value = yield Ok(first_bit)
 
@@ -564,6 +580,14 @@ def as_generator_result(
                 except exceptions as exc:
                     send_value = yield Err(exc)
                     return None
+                except UnwrapError as ue:
+                    if ue.__cause__ is not None and isinstance(
+                        ue.__cause__, exceptions
+                    ):
+                        yield Err(ue.__cause__)
+                        return None
+
+                    raise
 
                 send_value = yield Ok(yield_value)
 
@@ -600,6 +624,12 @@ def as_async_generator_result(
             except exceptions as exc:
                 yield Err(exc)
                 return
+            except UnwrapError as ue:
+                if ue.__cause__ is not None and isinstance(ue.__cause__, exceptions):
+                    yield Err(ue.__cause__)
+                    return
+
+                raise
 
             send_value = yield Ok(first_bit)
 
@@ -611,6 +641,14 @@ def as_async_generator_result(
                 except exceptions as exc:
                     send_value = yield Err(exc)
                     return
+                except UnwrapError as ue:
+                    if ue.__cause__ is not None and isinstance(
+                        ue.__cause__, exceptions
+                    ):
+                        yield Err(ue.__cause__)
+                        return
+
+                    raise
 
                 send_value = yield Ok(yield_value)
 

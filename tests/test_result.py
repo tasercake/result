@@ -17,6 +17,31 @@ from result import (
 )
 
 
+def sq(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+async def sq_async(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+def to_err(i: int) -> Result[int, int]:
+    return Err(i)
+
+
+async def to_err_async(i: int) -> Result[int, int]:
+    return Err(i)
+
+
+# Lambda versions of the same functions, just for test/type coverage
+def sq_lambda(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+def to_err_lambda(i: int) -> Result[int, int]:
+    return Err(i)
+
+
 def test_ok_factories() -> None:
     instance = Ok(1)
     assert instance._value == 1
@@ -367,6 +392,24 @@ def test_as_result_other_exception() -> None:
         f()
 
 
+def test_as_result_unwraps() -> None:
+    @as_result(ValueError)
+    def raises_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    @as_result(IndexError, ValueError)
+    def does_not_raise_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    with pytest.raises(UnwrapError):
+        raises_unwrapping_error(123)
+
+    err_response = does_not_raise_unwrapping_error(123)
+    assert isinstance(err_response.unwrap_err(), IndexError)
+
+
 def test_as_result_invalid_usage() -> None:
     """
     Invalid use of ``as_result()`` raises reasonable errors.
@@ -423,29 +466,23 @@ async def test_as_async_result() -> None:
     assert isinstance(bad_result.unwrap_err(), ValueError)
 
 
-def sq(i: int) -> Result[int, int]:
-    return Ok(i * i)
+@pytest.mark.asyncio
+async def test_as_async_result_unwraps() -> None:
+    @as_async_result(ValueError)
+    async def raises_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
 
+    @as_async_result(IndexError, ValueError)
+    async def does_not_raise_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
 
-async def sq_async(i: int) -> Result[int, int]:
-    return Ok(i * i)
+    with pytest.raises(UnwrapError):
+        await raises_unwrapping_error(123)
 
-
-def to_err(i: int) -> Result[int, int]:
-    return Err(i)
-
-
-async def to_err_async(i: int) -> Result[int, int]:
-    return Err(i)
-
-
-# Lambda versions of the same functions, just for test/type coverage
-def sq_lambda(i: int) -> Result[int, int]:
-    return Ok(i * i)
-
-
-def to_err_lambda(i: int) -> Result[int, int]:
-    return Err(i)
+    err_response = await does_not_raise_unwrapping_error(123)
+    assert isinstance(err_response.unwrap_err(), IndexError)
 
 
 def test_as_generator_result_ok() -> None:
@@ -476,6 +513,29 @@ def test_as_generator_result_err() -> None:
     assert error_result.err_value.args[0] == "Test Error"
     with pytest.raises(StopIteration):
         next(result)
+
+
+def test_as_generator_result_unwraps() -> None:
+    @as_generator_result(ValueError)
+    def raises_unwrapping_error(value: int) -> Generator[int, None, None]:
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    @as_generator_result(IndexError, ValueError)
+    def does_not_raise_unwrapping_error(value: int) -> Generator[int, None, None]:
+        yield 3
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    raising_generator = raises_unwrapping_error(123)
+    with pytest.raises(UnwrapError):
+        next(raising_generator)
+
+    running_generator = does_not_raise_unwrapping_error(123)
+    assert next(running_generator) == Ok(3)
+    assert next(running_generator).unwrap_err().args[0] == "Test Error"
+    with pytest.raises(StopIteration):
+        next(running_generator)
 
 
 def test_as_generator_result_with_send() -> None:
@@ -549,6 +609,30 @@ async def test_as_async_generator_result_err() -> None:
 
     with pytest.raises(StopAsyncIteration):
         await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_unwraps() -> None:
+    @as_async_generator_result(ValueError)
+    async def raises_unwrapping_error(value: int) -> AsyncGenerator[int, None]:
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    @as_async_generator_result(IndexError, ValueError)
+    async def does_not_raise_unwrapping_error(value: int) -> AsyncGenerator[int, None]:
+        yield 3
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    raising_generator = raises_unwrapping_error(123)
+    with pytest.raises(UnwrapError):
+        await anext(raising_generator)
+
+    running_generator = does_not_raise_unwrapping_error(123)
+    assert await anext(running_generator) == Ok(3)
+    assert (await anext(running_generator)).unwrap_err().args[0] == "Test Error"
+    with pytest.raises(StopAsyncIteration):
+        await anext(running_generator)
 
 
 @pytest.mark.asyncio
