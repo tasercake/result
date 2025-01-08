@@ -29,7 +29,7 @@ build-backend = "hatchling.build"
 path = "src/result/__init__.py"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 files = ["src"]
 check_untyped_defs = true
 disallow_incomplete_defs = true

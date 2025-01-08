@@ -14,7 +14,7 @@ test: phony
 	uv run pytest
 
 docs: phony
-	uv run lazydocs \
+	uv run --python 3.10 lazydocs \
 		--overview-file README.md \
 		--src-base-url https://github.com/rustedpy/result/blob/main/ \
 		./src/result
