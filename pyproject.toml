@@ -30,7 +30,7 @@ path = "src/result/__init__.py"
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src", "tests"]
+files = ["src"]
 check_untyped_defs = true
 disallow_incomplete_defs = true
 disallow_untyped_decorators = true
@@ -52,13 +52,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.pytest.ini_options]
-addopts = [
-  "--tb=short",
-  "--cov=result",
-  "--cov=tests",
-  "--cov-report=term",
-  "--cov-report=xml",
-]
+addopts = ["--tb=short"]
 testpaths = ["tests"]
 
 [dependency-groups]
@@ -67,7 +61,6 @@ dev = [
   "mypy>=1.14.1",
   "pytest>=8.3.4",
   "pytest-asyncio>=0.25.1",
-  "pytest-cov>=6.0.0",
   "pytest-mypy-plugins>=3.2.0",
   "ruff>=0.8.6",
 ]

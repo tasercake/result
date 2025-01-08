@@ -4,12 +4,10 @@
 install: phony
 	uv sync
 
-lint: phony lint-flake lint-mypy
-
-lint-flake: phony
+lint: phony
 	uv run ruff check .
 
-lint-mypy: phony
+type-check: phony
 	uv run mypy
 
 test: phony
