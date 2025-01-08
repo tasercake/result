@@ -2,30 +2,19 @@
 .PHONY: phony
 
 install: phony
-ifndef VIRTUAL_ENV
-	$(error install can only be run inside a Python virtual environment)
-endif
-	@echo Installing dependencies...
-	pip install -r requirements-dev.txt
-	pip install -e .
+	uv sync
 
-lint: phony lint-flake lint-mypy
+lint: phony
+	uv run ruff check .
 
-lint-flake: phony
-	flake8
-
-lint-flake-pre310: phony
-	# Python <3.10 doesn't support pattern matching.
-	flake8 --extend-exclude tests/test_pattern_matching.py
-
-lint-mypy: phony
-	mypy
+type-check: phony
+	uv run mypy
 
 test: phony
-	pytest
+	uv run pytest
 
 docs: phony
-	lazydocs \
+	uv run --python 3.10 lazydocs \
 		--overview-file README.md \
-		--src-base-url https://github.com/rustedpy/result/blob/main/ \
+		--src-base-url https://github.com/montasaurus/result/blob/main/ \
 		./src/result

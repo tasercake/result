@@ -1,23 +1,17 @@
 # Result
 
-[![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/rustedpy/result/ci.yml?branch=main)](https://github.com/rustedpy/result/actions/workflows/ci.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/rustedpy/result/branch/main/graph/badge.svg)](https://codecov.io/gh/rustedpy/result)
-
 A simple Result type for Python 3 [inspired by
 Rust](https://doc.rust-lang.org/std/result/), fully type annotated.
 
+> [!WARNING]
+> Forked from the original [result](https://github.com/rustedpy/result) library after it became unmaintained. This version is experimental and mainly used for my own projects--use it at your own risk!
+
 ## Installation
-
-Latest release:
-
-``` sh
-$ pip install result
-```
 
 Latest GitHub `main` branch version:
 
 ``` sh
-$ pip install git+https://github.com/rustedpy/result
+uv add git+https://github.com/montasaurus/result
 ```
 
 ## Summary
@@ -421,29 +415,6 @@ TypeError("Got async_generator but expected generator")
 Sometimes regular `do()` can handle async values, but this error means
 you have hit a case where it does not. You should use `do_async()` here
 instead.
-
-## Contributing
-
-These steps should work on any Unix-based system (Linux, macOS, etc) with Python
-and `make` installed. On Windows, you will need to refer to the Python
-documentation (linked below) and reference the `Makefile` for commands to run
-from the non-unix shell you're using on Windows.
-
-1. Setup and activate a virtual environment. See [Python docs][pydocs-venv] for more
-   information about virtual environments and setup.
-2. Run `make install` to install dependencies
-3. Switch to a new git branch and make your changes
-4. Test your changes:
-  - `make test`
-  - `make lint`
-  - You can also start a Python REPL and import `result`
-5. Update documentation
-  - Edit any relevant docstrings, markdown files
-  - Run `make docs`
-6. Add an entry to the [changelog](./CHANGELOG.md)
-5. Git commit all your changes and create a new PR.
-
-[pydocs-venv]: https://docs.python.org/3/library/venv.html
 
 ## FAQ
 

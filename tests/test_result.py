@@ -1,10 +1,45 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import AsyncGenerator, Generator
 
 import pytest
 
-from result import Err, Ok, OkErr, Result, UnwrapError, as_async_result, as_result
+from result import (
+    Err,
+    Ok,
+    OkErr,
+    Result,
+    UnwrapError,
+    as_async_generator_result,
+    as_async_result,
+    as_generator_result,
+    as_result,
+)
+
+
+def sq(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+async def sq_async(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+def to_err(i: int) -> Result[int, int]:
+    return Err(i)
+
+
+async def to_err_async(i: int) -> Result[int, int]:
+    return Err(i)
+
+
+# Lambda versions of the same functions, just for test/type coverage
+def sq_lambda(i: int) -> Result[int, int]:
+    return Ok(i * i)
+
+
+def to_err_lambda(i: int) -> Result[int, int]:
+    return Err(i)
 
 
 def test_ok_factories() -> None:
@@ -51,27 +86,27 @@ def test_repr() -> None:
 
 
 def test_ok_value() -> None:
-    res = Ok('haha')
-    assert res.ok_value == 'haha'
+    res = Ok("haha")
+    assert res.ok_value == "haha"
 
 
 def test_err_value() -> None:
-    res = Err('haha')
-    assert res.err_value == 'haha'
+    res = Err("haha")
+    assert res.err_value == "haha"
 
 
 def test_ok() -> None:
-    res = Ok('haha')
+    res = Ok("haha")
     assert res.is_ok() is True
     assert res.is_err() is False
-    assert res.ok_value == 'haha'
+    assert res.ok_value == "haha"
 
 
 def test_err() -> None:
-    res = Err(':(')
+    res = Err(":(")
     assert res.is_ok() is False
     assert res.is_err() is True
-    assert res.err_value == ':('
+    assert res.err_value == ":("
 
 
 def test_err_value_is_exception() -> None:
@@ -90,115 +125,115 @@ def test_err_value_is_exception() -> None:
 
 
 def test_ok_method() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.ok() == 'yay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.ok() == "yay"
     assert n.ok() is None  # type: ignore[func-returns-value]
 
 
 def test_err_method() -> None:
-    o = Ok('yay')
-    n = Err('nay')
+    o = Ok("yay")
+    n = Err("nay")
     assert o.err() is None  # type: ignore[func-returns-value]
-    assert n.err() == 'nay'
+    assert n.err() == "nay"
 
 
 def test_expect() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.expect('failure') == 'yay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.expect("failure") == "yay"
     with pytest.raises(UnwrapError):
-        n.expect('failure')
+        n.expect("failure")
 
 
 def test_expect_err() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert n.expect_err('hello') == 'nay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert n.expect_err("hello") == "nay"
     with pytest.raises(UnwrapError):
-        o.expect_err('hello')
+        o.expect_err("hello")
 
 
 def test_unwrap() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.unwrap() == 'yay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.unwrap() == "yay"
     with pytest.raises(UnwrapError):
         n.unwrap()
 
 
 def test_unwrap_err() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert n.unwrap_err() == 'nay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert n.unwrap_err() == "nay"
     with pytest.raises(UnwrapError):
         o.unwrap_err()
 
 
 def test_unwrap_or() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.unwrap_or('some_default') == 'yay'
-    assert n.unwrap_or('another_default') == 'another_default'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.unwrap_or("some_default") == "yay"
+    assert n.unwrap_or("another_default") == "another_default"
 
 
 def test_unwrap_or_else() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.unwrap_or_else(str.upper) == 'yay'
-    assert n.unwrap_or_else(str.upper) == 'NAY'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.unwrap_or_else(str.upper) == "yay"
+    assert n.unwrap_or_else(str.upper) == "NAY"
 
 
 def test_unwrap_or_raise() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.unwrap_or_raise(ValueError) == 'yay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.unwrap_or_raise(ValueError) == "yay"
     with pytest.raises(ValueError) as exc_info:
         n.unwrap_or_raise(ValueError)
-    assert exc_info.value.args == ('nay',)
+    assert exc_info.value.args == ("nay",)
 
 
 def test_map() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.map(str.upper).ok() == 'YAY'
-    assert n.map(str.upper).err() == 'nay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.map(str.upper).ok() == "YAY"
+    assert n.map(str.upper).err() == "nay"
 
     num = Ok(3)
     errnum = Err(2)
-    assert num.map(str).ok() == '3'
+    assert num.map(str).ok() == "3"
     assert errnum.map(str).err() == 2
 
 
 def test_map_or() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.map_or('hay', str.upper) == 'YAY'
-    assert n.map_or('hay', str.upper) == 'hay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.map_or("hay", str.upper) == "YAY"
+    assert n.map_or("hay", str.upper) == "hay"
 
     num = Ok(3)
     errnum = Err(2)
-    assert num.map_or('-1', str) == '3'
-    assert errnum.map_or('-1', str) == '-1'
+    assert num.map_or("-1", str) == "3"
+    assert errnum.map_or("-1", str) == "-1"
 
 
 def test_map_or_else() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.map_or_else(lambda: 'hay', str.upper) == 'YAY'
-    assert n.map_or_else(lambda: 'hay', str.upper) == 'hay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.map_or_else(lambda: "hay", str.upper) == "YAY"
+    assert n.map_or_else(lambda: "hay", str.upper) == "hay"
 
     num = Ok(3)
     errnum = Err(2)
-    assert num.map_or_else(lambda: '-1', str) == '3'
-    assert errnum.map_or_else(lambda: '-1', str) == '-1'
+    assert num.map_or_else(lambda: "-1", str) == "3"
+    assert errnum.map_or_else(lambda: "-1", str) == "-1"
 
 
 def test_map_err() -> None:
-    o = Ok('yay')
-    n = Err('nay')
-    assert o.map_err(str.upper).ok() == 'yay'
-    assert n.map_err(str.upper).err() == 'NAY'
+    o = Ok("yay")
+    n = Err("nay")
+    assert o.map_err(str.upper).ok() == "yay"
+    assert n.map_err(str.upper).err() == "NAY"
 
 
 def test_and_then() -> None:
@@ -215,7 +250,9 @@ def test_and_then() -> None:
 
 def test_inspect() -> None:
     oks: list[int] = []
-    add_to_oks: Callable[[int], None] = lambda x: oks.append(x)
+
+    def add_to_oks(x: int) -> None:
+        return oks.append(x)
 
     assert Ok(2).inspect(add_to_oks) == Ok(2)
     assert Err("e").inspect(add_to_oks) == Err("e")
@@ -224,7 +261,9 @@ def test_inspect() -> None:
 
 def test_inspect_err() -> None:
     errs: list[str] = []
-    add_to_errs: Callable[[str], None] = lambda x: errs.append(x)
+
+    def add_to_errs(x: str) -> None:
+        return errs.append(x)
 
     assert Ok(2).inspect_err(add_to_errs) == Ok(2)
     assert Err("e").inspect_err(add_to_errs) == Err("e")
@@ -245,8 +284,12 @@ def test_inspect_regular_fn() -> None:
 
 @pytest.mark.asyncio
 async def test_and_then_async() -> None:
-    assert (await (await Ok(2).and_then_async(sq_async)).and_then_async(sq_async)).ok() == 16
-    assert (await (await Ok(2).and_then_async(sq_async)).and_then_async(to_err_async)).err() == 4
+    assert (
+        await (await Ok(2).and_then_async(sq_async)).and_then_async(sq_async)
+    ).ok() == 16
+    assert (
+        await (await Ok(2).and_then_async(sq_async)).and_then_async(to_err_async)
+    ).err() == 4
     assert (
         await (await Ok(2).and_then_async(to_err_async)).and_then_async(to_err_async)
     ).err() == 2
@@ -263,14 +306,14 @@ async def test_map_async() -> None:
     async def str_async(x: int) -> str:
         return str(x)
 
-    o = Ok('yay')
-    n = Err('nay')
-    assert (await o.map_async(str_upper_async)).ok() == 'YAY'
-    assert (await n.map_async(str_upper_async)).err() == 'nay'
+    o = Ok("yay")
+    n = Err("nay")
+    assert (await o.map_async(str_upper_async)).ok() == "YAY"
+    assert (await n.map_async(str_upper_async)).err() == "nay"
 
     num = Ok(3)
     errnum = Err(2)
-    assert (await num.map_async(str_async)).ok() == '3'
+    assert (await num.map_async(str_async)).ok() == "3"
     assert (await errnum.map_async(str_async)).err() == 2
 
 
@@ -287,15 +330,15 @@ def test_or_else() -> None:
 
 
 def test_isinstance_result_type() -> None:
-    o = Ok('yay')
-    n = Err('nay')
+    o = Ok("yay")
+    n = Err("nay")
     assert isinstance(o, OkErr)
     assert isinstance(n, OkErr)
     assert not isinstance(1, OkErr)
 
 
 def test_error_context() -> None:
-    n = Err('nay')
+    n = Err("nay")
     with pytest.raises(UnwrapError) as exc_info:
         n.unwrap()
     exc = exc_info.value
@@ -306,8 +349,8 @@ def test_slots() -> None:
     """
     Ok and Err have slots, so assigning arbitrary attributes fails.
     """
-    o = Ok('yay')
-    n = Err('nay')
+    o = Ok("yay")
+    n = Err("nay")
     with pytest.raises(AttributeError):
         o.some_arbitrary_attribute = 1  # type: ignore[attr-defined]
     with pytest.raises(AttributeError):
@@ -347,6 +390,24 @@ def test_as_result_other_exception() -> None:
 
     with pytest.raises(IndexError):
         f()
+
+
+def test_as_result_unwraps() -> None:
+    @as_result(ValueError)
+    def raises_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    @as_result(IndexError, ValueError)
+    def does_not_raise_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    with pytest.raises(UnwrapError):
+        raises_unwrapping_error(123)
+
+    err_response = does_not_raise_unwrapping_error(123)
+    assert isinstance(err_response.unwrap_err(), IndexError)
 
 
 def test_as_result_invalid_usage() -> None:
@@ -405,22 +466,214 @@ async def test_as_async_result() -> None:
     assert isinstance(bad_result.unwrap_err(), ValueError)
 
 
-def sq(i: int) -> Result[int, int]:
-    return Ok(i * i)
+@pytest.mark.asyncio
+async def test_as_async_result_unwraps() -> None:
+    @as_async_result(ValueError)
+    async def raises_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    @as_async_result(IndexError, ValueError)
+    async def does_not_raise_unwrapping_error(value: int) -> int:
+        Err(IndexError("Test Error")).unwrap()
+        return value
+
+    with pytest.raises(UnwrapError):
+        await raises_unwrapping_error(123)
+
+    err_response = await does_not_raise_unwrapping_error(123)
+    assert isinstance(err_response.unwrap_err(), IndexError)
 
 
-async def sq_async(i: int) -> Result[int, int]:
-    return Ok(i * i)
+def test_as_generator_result_ok() -> None:
+    @as_generator_result(ValueError)
+    def my_generator(val: int) -> Generator[int, None, None]:
+        yield val
+        yield val + 1
+        yield val + 2
+
+    result = my_generator(1)
+    assert next(result) == Ok(1)
+    assert next(result) == Ok(2)
+    assert next(result) == Ok(3)
+    with pytest.raises(StopIteration):
+        next(result)
 
 
-def to_err(i: int) -> Result[int, int]:
-    return Err(i)
+def test_as_generator_result_err() -> None:
+    @as_generator_result(ValueError)
+    def my_generator(val: int) -> Generator[int, None, None]:
+        yield val
+        raise ValueError("Test Error")
+
+    result = my_generator(1)
+    assert next(result) == Ok(1)
+    error_result = next(result)
+    assert isinstance(error_result, Err)
+    assert error_result.err_value.args[0] == "Test Error"
+    with pytest.raises(StopIteration):
+        next(result)
 
 
-async def to_err_async(i: int) -> Result[int, int]:
-    return Err(i)
+def test_as_generator_result_unwraps() -> None:
+    @as_generator_result(ValueError)
+    def raises_unwrapping_error(value: int) -> Generator[int, None, None]:
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    @as_generator_result(IndexError, ValueError)
+    def does_not_raise_unwrapping_error(value: int) -> Generator[int, None, None]:
+        yield 3
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    raising_generator = raises_unwrapping_error(123)
+    with pytest.raises(UnwrapError):
+        next(raising_generator)
+
+    running_generator = does_not_raise_unwrapping_error(123)
+    assert next(running_generator) == Ok(3)
+    assert next(running_generator).unwrap_err().args[0] == "Test Error"
+    with pytest.raises(StopIteration):
+        next(running_generator)
 
 
-# Lambda versions of the same functions, just for test/type coverage
-sq_lambda: Callable[[int], Result[int, int]] = lambda i: Ok(i * i)
-to_err_lambda: Callable[[int], Result[int, int]] = lambda i: Err(i)
+def test_as_generator_result_with_send() -> None:
+    @as_generator_result(ValueError)
+    def my_generator() -> Generator[int, int, None]:
+        val = yield 1
+        val = yield val if val is not None else 0
+        val = yield val + 2 if val is not None else 0
+
+    result = my_generator()
+    assert next(result) == Ok(1)
+    assert result.send(10) == Ok(10)
+    assert result.send(20) == Ok(22)
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+def test_as_generator_result_with_send_and_exception() -> None:
+    @as_generator_result(ValueError)
+    def my_generator() -> Generator[Result[int, ValueError], int, None]:
+        val: int | None = yield Ok(1)
+        try:
+            if val is not None:
+                raise ValueError("Send Value Error")
+        except ValueError as e:
+            val = yield Err(e)
+
+        val = yield Ok(val) if val is not None else Ok(0)
+        val = yield Ok(val + 2) if val is not None else Ok(0)
+
+    result = my_generator()
+    assert next(result) == Ok(Ok(1))
+
+    error_result = result.send(10)
+    assert error_result.unwrap().unwrap_err().args[0] == "Send Value Error"
+
+    assert result.send(20) == Ok(Ok(20))
+    assert result.send(30) == Ok(Ok(32))
+    with pytest.raises(StopIteration):
+        next(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_ok() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator(val: int) -> AsyncGenerator[int, None]:
+        yield val
+        yield val + 1
+        yield val + 2
+
+    result = my_generator(1)
+    assert await anext(result) == Ok(1)
+    assert await anext(result) == Ok(2)
+    assert await anext(result) == Ok(3)
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_err() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator(val: int) -> AsyncGenerator[int, None]:
+        yield val
+        raise ValueError("Test Error")
+
+    result = my_generator(1)
+    assert await anext(result) == Ok(1)
+    error_result = await anext(result)
+    assert isinstance(error_result, Err)
+    assert error_result.err_value.args[0] == "Test Error"
+
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_unwraps() -> None:
+    @as_async_generator_result(ValueError)
+    async def raises_unwrapping_error(value: int) -> AsyncGenerator[int, None]:
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    @as_async_generator_result(IndexError, ValueError)
+    async def does_not_raise_unwrapping_error(value: int) -> AsyncGenerator[int, None]:
+        yield 3
+        Err(IndexError("Test Error")).unwrap()
+        yield 5
+
+    raising_generator = raises_unwrapping_error(123)
+    with pytest.raises(UnwrapError):
+        await anext(raising_generator)
+
+    running_generator = does_not_raise_unwrapping_error(123)
+    assert await anext(running_generator) == Ok(3)
+    assert (await anext(running_generator)).unwrap_err().args[0] == "Test Error"
+    with pytest.raises(StopAsyncIteration):
+        await anext(running_generator)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_with_send() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator() -> AsyncGenerator[int, int]:
+        val = yield 1
+        val = yield val if val is not None else 0
+        val = yield val + 2 if val is not None else 0
+
+    result = my_generator()
+    assert await anext(result) == Ok(1)
+    assert await result.asend(10) == Ok(10)
+    assert await result.asend(20) == Ok(22)
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
+
+
+@pytest.mark.asyncio
+async def test_as_async_generator_result_with_send_and_exception() -> None:
+    @as_async_generator_result(ValueError)
+    async def my_generator() -> AsyncGenerator[Result[int, ValueError], int]:
+        val: int | None = yield Ok(1)
+        try:
+            if val is not None:
+                raise ValueError("Async Send Value Error")
+        except ValueError as e:
+            val = yield Err(e)
+
+        val = yield Ok(val) if val is not None else Ok(0)
+        val = yield Ok(val + 2) if val is not None else Ok(0)
+
+    result = my_generator()
+    assert await anext(result) == Ok(Ok(1))
+
+    # This now correctly gets the Err directly
+    error_result = await result.asend(10)
+    assert error_result.unwrap().unwrap_err().args[0] == "Async Send Value Error"
+
+    # Correctly resumes with the sent value after the exception
+    assert await result.asend(20) == Ok(Ok(20))
+    assert await result.asend(30) == Ok(Ok(32))
+    with pytest.raises(StopAsyncIteration):
+        await anext(result)
