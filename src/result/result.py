@@ -559,7 +559,7 @@ def as_generator_result(
             try:
                 first_bit = next(gen)
             except StopIteration as e:
-                return e.value
+                return e.value  # type: ignore[no-any-return]
             except exceptions as exc:
                 yield Err(exc)
                 return None
@@ -576,7 +576,7 @@ def as_generator_result(
                 try:
                     yield_value = gen.send(send_value)
                 except StopIteration as e:
-                    return e.value
+                    return e.value  # type: ignore[no-any-return]
                 except exceptions as exc:
                     send_value = yield Err(exc)
                     return None
