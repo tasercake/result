@@ -11,7 +11,7 @@ Rust](https://doc.rust-lang.org/std/result/), fully type annotated.
 Latest GitHub `main` branch version:
 
 ``` sh
-uv add git+https://github.com/montasaurus/result
+uv add git+https://github.com/tasercake/result
 ```
 
 ## Summary
